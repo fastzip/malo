@@ -1,6 +1,7 @@
 import mmap
-import zipfile
 import struct
+import zipfile
+import zlib
 
 A = b"# benign\n"
 B = b"print('malicious')\n# 12323013111123311000\n"
@@ -84,6 +85,40 @@ with open("malicious/short_usize_zip64.zip", "w+b") as f:
 
     # data[x1:x1+8] = struct.pack("<L", len("hello\n"))
     # data[fn2-0x16:fn2-0x16+4] = struct.pack("<L", len("hello\n"))
+
+with zipfile.ZipFile("malicious/second_unicode_extra.zip", "w") as z:
+    name1 = "original"
+    name2 = "first-unicode-extra"
+    name3 = "second-unicode-extra"
+
+    zi = zipfile.ZipInfo(name1)
+    zi.extra = b"".join([
+        struct.pack("<HHBL", 0x7075, len(name2) + 5, 1, zlib.crc32(name1.encode())),
+        name2.encode(),
+        struct.pack("<HHBL", 0x7075, len(name3) + 5, 1, zlib.crc32(name1.encode())),
+        name3.encode(),
+    ])
+    with z.open(zi, "w") as zf:
+        zf.write(b"anything\n")
+
+with zipfile.ZipFile("malicious/unicode_extra_chain.zip", "w") as z:
+    name1 = "original"
+    name2 = "first-unicode-extra"
+    name3 = "ignoreme"
+    name4 = "reset-unicode-extra"
+
+    zi = zipfile.ZipInfo(name1)
+    zi.extra = b"".join([
+        struct.pack("<HHBL", 0x7075, len(name2) + 5, 1, zlib.crc32(name1.encode())),
+        name2.encode(),
+        # This one doesn't match, and causes info-zip to stop looking
+        struct.pack("<HHBL", 0x7075, len(name3) + 5, 1, 4),
+        name3.encode(),
+        struct.pack("<HHBL", 0x7075, len(name4) + 5, 1, zlib.crc32(name1.encode())),
+        name4.encode(),
+    ])
+    with z.open(zi, "w") as zf:
+        zf.write(b"anything\n")
 
 # with open("malicious/extra_file_stream.zip", "w+b") as f:
 #     with zipfile.ZipFile(f, "w") as z:
