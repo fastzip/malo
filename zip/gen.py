@@ -2,6 +2,7 @@ import mmap
 import struct
 import zipfile
 import zlib
+from io import BytesIO
 
 A = b"# benign\n"
 B = b"print('malicious')\n# 12323013111123311000\n"
@@ -120,6 +121,22 @@ with zipfile.ZipFile("malicious/unicode_extra_chain.zip", "w") as z:
     with z.open(zi, "w") as zf:
         zf.write(b"anything\n")
 
+with BytesIO() as b:
+    with zipfile.ZipFile(b, "w") as z:
+        z.writestr("fileb", b"B")
+    t1 = b.getvalue()
+
+with BytesIO() as b:
+    with zipfile.ZipFile(b, "w") as z:
+        z.writestr("filea", b"A")
+    t2 = b.getvalue()
+
+with open("malicious/zipinzip.zip", "wb") as f:
+    f.write(t1[:-2])
+    f.write(struct.pack("<H", len(t2)))
+    f.write(t2)
+
+    
 # with open("malicious/extra_file_stream.zip", "w+b") as f:
 #     with zipfile.ZipFile(f, "w") as z:
 #         z.writestr("foo", b"abcdefgh", compress_type=0)
