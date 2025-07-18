@@ -54,8 +54,8 @@ CENTRAL_DIRECTORY_SIGNATURE = 0x02014B50
 class CentralDirectoryHeader:
     # Section 4.3.12 of APPNOTE.TXT
     signature: int = CENTRAL_DIRECTORY_SIGNATURE
-    version_made_by: int = 0
-    version_needed: int = 0
+    version_made_by: int = 20
+    version_needed: int = 20
     flags: int = 0
     method: int = 0
     mtime: int = 0
@@ -109,8 +109,8 @@ ZIP64_EOCD_SIGNATURE = 0x06064B50
 class Zip64EOCD:
     signature: int = ZIP64_EOCD_SIGNATURE
     size: Optional[int] = None
-    version_made_by: int = 0
-    version_needed: int = 0
+    version_made_by: int = 20
+    version_needed: int = 20
     disk_num: int = 0
     disk_with_start: int = 0
     num_entries_this_disk: int = 0
