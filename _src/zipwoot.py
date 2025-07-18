@@ -54,6 +54,7 @@ def compile(s):
             except NameError as e:
                 nonlocal forward_reference
                 forward_reference = True
+                return 0
         else:
             return int(expr, 16)
 
