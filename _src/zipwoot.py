@@ -52,7 +52,8 @@ def compile(s):
             try:
                 return eval(expr, env, env)
             except NameError as e:
-                breakpoint()
+                nonlocal forward_reference
+                forward_reference = True
         else:
             return int(expr, 16)
 
@@ -67,7 +68,10 @@ def compile(s):
         return args
 
 
-    for _ in range(3):
+    for _ in range(5):
+        buf.seek(0, 0)
+        buf.truncate()
+
         forward_reference = False
         for line in LINE_RE.finditer(s):
             n = line.group("cmd")
@@ -111,7 +115,10 @@ def compile(s):
 
             print("  | " + " ".join("%02x" % c for c in buf.getvalue()[start_pos:]), file=sys.stderr)
 
-    return buf.getvalue()
+        if not forward_reference:
+            return buf.getvalue()
+
+    raise Exception("Could not complete forward references after some tries")
 
 if __name__ == "__main__":
     compile("""\
