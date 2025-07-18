@@ -217,3 +217,48 @@ mark start_of_cd
 cd csize=y-x usize=5 crc32=0x3610a686 method=8
 eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
 """)
+gen(
+    "accept/data_descriptor_zip64.zip",
+    """
+lfh flags=8 method=8 extra_length=4
+short 1 0
+mark x
+deflate b"hello"
+mark y
+# data descriptor now, crc csize usize
+long 0x08074b50 0x3610a686 
+quad =y-x =5
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
+""")
+gen(
+    "reject/data_descriptor_zip64_csize.zip",
+    """
+lfh flags=8 method=8 extra_length=4
+short 1 0
+mark x
+deflate b"hello"
+mark y
+# data descriptor now, crc csize usize
+long 0x08074b50 0x3610a686 
+quad =y-x+1 =5
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
+""")
+gen(
+    "reject/data_descriptor_zip64_usize.zip",
+    """
+lfh flags=8 method=8 extra_length=4
+short 1 0
+mark x
+deflate b"hello"
+mark y
+# data descriptor now, crc csize usize
+long 0x08074b50 0x3610a686 
+quad =y-x =6
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
+""")
