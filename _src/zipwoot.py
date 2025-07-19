@@ -188,6 +188,8 @@ def compile(s):
             start_pos = buf.tell()
             if n in ("bit", "byte"):
                 buf.write(bytes(bit_compile(n + " " + line.group("rest"))))
+            elif n == "pad":
+                buf.write(b"X" * h(line.group("rest")))
             elif n in ("short", "long", "quad"):
                 f = FORMATS[n]
                 for t in line.group("rest").split():
@@ -208,7 +210,7 @@ def compile(s):
                 a, b = line.group("rest").split()
                 av = h(a)
                 bv = h(b)
-                if av != bv:
+                if not forward_reference and av != bv:
                     raise AssertionError(f"{av!r} != {bv!r}")
                 continue
             else:

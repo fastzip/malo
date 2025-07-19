@@ -290,3 +290,42 @@ z64eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd siz
 z64loc relative_offset=end_of_cd
 eocd num_entries_this_disk=0xffff num_entries_total=0xffff offset_start=0xffffffff size=0xffffffff
 """)
+gen(
+    "malicious/zip64_eocd_confusion.zip",
+    """
+# First zip contents
+lfh flags=0 method=8 csize=y-x usize=5 crc32=0x3610a686
+mark x
+deflate b"hello"
+mark y
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+mark end_of_cd
+z64eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size_of_cd=end_of_cd-start_of_cd size=b-end_of_cd-12
+
+# These four bytes need to look like a zip64 eocd, but also need to look like a valid extra.
+mark tmp
+
+z64loc relative_offset=end_of_cd
+eocd num_entries_this_disk=0xffff num_entries_total=0xffff offset_start=0xffffffff size=0xffffffff comment_length=end-tmp2
+mark tmp2
+
+assert 6060 =b-tmp-4
+pad =24672-165-22
+
+# Second zip contents
+mark start2
+lfh flags=0 method=8 csize=y2-x2 usize=5 crc32=0x551e5fb4 filename=b"secon"
+mark x2
+deflate b"BOOM!"
+mark y2
+mark start_of_cd2
+cd csize=y2-x2 usize=5 crc32=0x551e5fb4 method=8 header_offset=0 filename=b"secon"
+
+mark a
+z64eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size_of_cd=end_of_cd-start_of_cd
+mark b
+z64loc relative_offset=end_of_cd
+eocd num_entries_this_disk=0xffff num_entries_total=0xffff offset_start=0xffffffff size=0xffffffff
+mark end
+""")
