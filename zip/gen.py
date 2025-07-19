@@ -8,25 +8,25 @@ A = b"# benign\n"
 B = b"print('malicious')\n# 12323013111123311000\n"
 
 with zipfile.ZipFile("accept/store.zip", "w") as z:
-    z.writestr("foo", b"abcdefgh", compress_type=0)
+    z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
 
 with zipfile.ZipFile("accept/deflate.zip", "w") as z:
-    z.writestr("foo", b"abcdefgh", compress_type=8)
+    z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=8)
 
 with zipfile.ZipFile("accept/subdir.zip", "w") as z:
     z.mkdir("foo")
-    z.writestr("foo/bar", b"abcdefgh", compress_type=0)
+    z.writestr(zipfile.ZipInfo("foo/bar"), b"abcdefgh", compress_type=0)
 
 with zipfile.ZipFile("iffy/nosubdir.zip", "w") as z:
-    z.writestr("foo/bar", b"abcdefgh", compress_type=0)
+    z.writestr(zipfile.ZipInfo("foo/bar"), b"abcdefgh", compress_type=0)
 
 with zipfile.ZipFile("iffy/prefix.zip", "w") as z:
     z.fp.write(b'    ')
-    z.writestr("foo", b"abcdefgh", compress_type=0)
+    z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
 
 with zipfile.ZipFile("accept/comment.zip", "w") as z:
     z.comment = b"hello"
-    z.writestr("foo", b"abcdefgh", compress_type=0)
+    z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
 
 with zipfile.ZipFile("iffy/extra3byte.zip", "w") as z:
     zi = zipfile.ZipInfo("foo")
@@ -35,16 +35,16 @@ with zipfile.ZipFile("iffy/extra3byte.zip", "w") as z:
 
 with zipfile.ZipFile("iffy/8bitcomment.zip", "w") as z:
     z.comment = b"\x50\x4b\x05\x06\x00\x00\x00\xff\xff" + b"\x00" * 100
-    z.writestr("foo", b"abcdefgh", compress_type=0)
+    z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
 
 with open("iffy/suffix_not_comment.zip", "wb") as f:
     with zipfile.ZipFile(f, "w") as z:
-        z.writestr("foo", b"abcdefgh", compress_type=0)
+        z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
     f.write(b'    ')
 
 with open("malicious/short_usize.zip", "w+b") as f:
     with zipfile.ZipFile(f, "w") as z:
-        z.writestr("file", A+B, compress_type=8)
+        z.writestr(zipfile.ZipInfo("file"), A+B, compress_type=8)
 
     data = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_DEFAULT)
 
@@ -61,7 +61,7 @@ with open("malicious/short_usize.zip", "w+b") as f:
 
 with open("malicious/short_usize_zip64.zip", "w+b") as f:
     with zipfile.ZipFile(f, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        with z.open("file", "w", force_zip64=True) as zf:
+        with z.open(zipfile.ZipInfo("file"), "w", force_zip64=True) as zf:
             zf.write(A+B)
         z.filelist[0].file_size = 0xfefefefefefefefe
 
@@ -123,36 +123,15 @@ with zipfile.ZipFile("malicious/unicode_extra_chain.zip", "w") as z:
 
 with BytesIO() as b:
     with zipfile.ZipFile(b, "w") as z:
-        z.writestr("fileb", b"B")
+        z.writestr(zipfile.ZipInfo("fileb"), b"B")
     t1 = b.getvalue()
 
 with BytesIO() as b:
     with zipfile.ZipFile(b, "w") as z:
-        z.writestr("filea", b"A")
+        z.writestr(zipfile.ZipInfo("filea"), b"A")
     t2 = b.getvalue()
 
 with open("malicious/zipinzip.zip", "wb") as f:
     f.write(t1[:-2])
     f.write(struct.pack("<H", len(t2)))
     f.write(t2)
-
-    
-# with open("malicious/extra_file_stream.zip", "w+b") as f:
-#     with zipfile.ZipFile(f, "w") as z:
-#         z.writestr("foo", b"abcdefgh", compress_type=0)
-#         z.writestr("bar", b"abcdefgh", compress_type=0)
-# 
-#     f.seek(0, 0)
-#     buf = f.read()
-# 
-#     a = buf.find(b"\x50\x4b\x01\02")
-#     b = buf.find(b"\x50\x4b\x01\02", a+4)
-#     c = buf.find(b"\x50\x4b\x05\06", b+4)
-# 
-#     assert b-a == c-b
-# 
-#     d = buf.find(b"\x02\x00\x02\x00")
-# 
-#     buf = buf[:a] + buf[b:c] + buf[a:b] + buf[c:d] + b"\x01\x00\x01\x00" + buf[d+4:-10] + struct.pack("<LLH", c-b, b, 0)
-#     f.seek(0, 0)
-#     f.write(buf)
