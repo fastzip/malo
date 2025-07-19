@@ -1,3 +1,103 @@
+"""
+This is a DSL designed to handle the tedium of offsets and data structures
+while making it easy to construct slightly-invalid zip files.
+
+* Commands are one per line.
+* Comments ignore the rest of line.
+* Most args and strings can't contain spaces or '#' currently, but otherwise
+  their prefixes and escapes behave as in Python.
+
+## `bit`, `byte`
+
+Introduce the bitstream language from `woot.py` which is intended for
+constructing deflate streams by hand.  Byte values are in hex.  `bit` and
+`byte` are modes which are sticky for the rest of the line.  `sync` outputs
+enough zero bits to be at the start of a byte.
+
+```
+bit 100 sync byte 0f f0 ff 0
+```
+
+## `mark`
+
+Takes a name, and stores the current byte offset in that name.  References to
+marks can be forward references, we rerun several times accumulating state
+until references evaluate.  (Needless to say, using forward-referenced values
+to change length is unlikely to work right.)
+
+Forward references make some things easier, like compressed data length.
+
+```
+lfh csize=b-a
+mark a
+deflate b"foo"
+mark b
+```
+
+## `short`, `long`, `quad`
+
+Followed by numbers which are interpreted as hex, unless they start with an '='
+and followed by an expression with no whitespace in it (literals in those
+expressions behave as in Python, so decimal).
+
+```
+mark a
+short 0
+mark b
+short =b-a+1 =len(b"foo")
+```
+
+## `deflate`
+
+Gives a standard zlib-compressed deflate stream for its argument which must be a byte literal.
+
+## Structures
+
+These are all of the form `lfh arg=val arg=val`.  `val` is a Python expression
+that can reference builtins as well as names that are marked.
+
+### Local File Header
+
+```
+lfh filename=b"foo"
+```
+
+Extras and compressed data should be handled in subsequent commands.
+
+### Central Directory Entry
+
+```
+cd filename=b"foo"
+```
+
+Comment, extras and compressed data should be handled in subsequent commands.
+
+### Zip64 End Of Central Directory
+
+```
+mark bocd
+cd ...
+mark eocd
+z64eocd num_entries_this_disk=1 num_entries_total=1 relative_offset=bocd size=eocd-bocd
+```
+
+### Zip64 End of Central Directory Locator
+
+```
+z64loc ...
+```
+
+
+### End of Central Directory
+
+```
+eocd num_entries_this_disk=1 num_entries_total=1 relative_offset=0xffffffff size=eocd-bocd comment_length=2
+byte 0 0
+```
+
+Comment should be handled in subsequent commands
+"""
+
 import ast
 import struct
 import sys
@@ -87,7 +187,7 @@ def compile(s):
 
             start_pos = buf.tell()
             if n in ("bit", "byte"):
-                buf.write(bytes(bit_compile(line.group("rest"))))
+                buf.write(bytes(bit_compile(n + " " + line.group("rest"))))
             elif n in ("short", "long", "quad"):
                 f = FORMATS[n]
                 for t in line.group("rest").split():
