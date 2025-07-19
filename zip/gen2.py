@@ -262,3 +262,31 @@ mark start_of_cd
 cd csize=y-x usize=5 crc32=0x3610a686 method=8
 eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
 """)
+gen(
+    "accept/zip64_eocd.zip",
+    """
+lfh flags=0 method=8 csize=y-x usize=5 crc32=0x3610a686
+mark x
+deflate b"hello"
+mark y
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+mark end_of_cd
+z64eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size_of_cd=end_of_cd-start_of_cd
+z64loc relative_offset=end_of_cd
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=0xffffffff size=0xffffffff
+""")
+gen(
+    "iffy/zip64_eocd_extensible_data.zip",
+    """
+lfh flags=0 method=8 csize=y-x usize=5 crc32=0x3610a686
+mark x
+deflate b"hello"
+mark y
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+mark end_of_cd
+z64eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size_of_cd=end_of_cd-start_of_cd extensible_data=b"\\x00\\x00\\x10\\x00zzzzzzzzzzzzzzzz"
+z64loc relative_offset=end_of_cd
+eocd num_entries_this_disk=0xffff num_entries_total=0xffff offset_start=0xffffffff size=0xffffffff
+""")
