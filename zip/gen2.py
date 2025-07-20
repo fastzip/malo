@@ -329,3 +329,16 @@ z64loc relative_offset=end_of_cd
 eocd num_entries_this_disk=0xffff num_entries_total=0xffff offset_start=0xffffffff size=0xffffffff
 mark end
 """)
+gen(
+    "iffy/prefix.zip",
+    """
+pad 4
+mark begin
+lfh flags=0 method=8 csize=y-x usize=5 crc32=0x3610a686
+mark x
+deflate b"hello"
+mark y
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd-begin size=.-start_of_cd
+""")

@@ -20,10 +20,6 @@ with zipfile.ZipFile("accept/subdir.zip", "w") as z:
 with zipfile.ZipFile("iffy/nosubdir.zip", "w") as z:
     z.writestr(zipfile.ZipInfo("foo/bar"), b"abcdefgh", compress_type=0)
 
-with zipfile.ZipFile("iffy/prefix.zip", "w") as z:
-    z.fp.write(b'    ')
-    z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
-
 with zipfile.ZipFile("accept/comment.zip", "w") as z:
     z.comment = b"hello"
     z.writestr(zipfile.ZipInfo("foo"), b"abcdefgh", compress_type=0)
