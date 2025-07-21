@@ -7,6 +7,11 @@ while making it easy to construct slightly-invalid zip files.
 * Most args and strings can't contain spaces or '#' currently, but otherwise
   their prefixes and escapes behave as in Python.
 
+## `pad`
+
+Store a meaningless byte as many times as the argument specifies.  Simply a
+shorthand notation for `byte =ord("X")` (`n` times)
+
 ## `bit`, `byte`
 
 Introduce the bitstream language from `woot.py` which is intended for
@@ -49,7 +54,13 @@ short =b-a+1 =len(b"foo")
 
 ## `deflate`
 
-Gives a standard zlib-compressed deflate stream for its argument which must be a byte literal.
+Gives a standard zlib-compressed deflate stream for its argument which must be
+a byte literal.  The result is output to the buffer.
+
+## `crc32`
+
+Gives a numeric crc of the argument, which must be a byte literal.  The result
+is output to the buffer.
 
 ## Structures
 
@@ -198,6 +209,10 @@ def compile(s):
                 arg = line.group("rest")
                 val = ast.literal_eval(arg)
                 buf.write(zlib.compress(val, -1, -15))
+            elif n == "crc32":
+                arg = line.group("rest")
+                val = ast.literal_eval(arg)
+                buf.write(struct.pack("<L", zlib.crc32(val)))
             elif n in STRUCTURES:
                 args = d(line.group("rest"))
                 e = STRUCTURES[n](**args)

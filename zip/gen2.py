@@ -175,6 +175,19 @@ mark start_of_cd
 cd csize=y-x usize=5 crc32=0x3610a686 method=8
 eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
 """)
+gen(
+    "reject/data_descriptor_bad_crc_0.zip",
+    """
+lfh flags=8 method=8
+mark x
+deflate b"bad"
+mark y
+# data descriptor now, crc csize usize
+long 0 0 =y-x 5
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0 method=8
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
+""")
 
 gen(
     "reject/data_descriptor_bad_csize.zip",
@@ -341,4 +354,25 @@ mark y
 mark start_of_cd
 cd csize=y-x usize=5 crc32=0x3610a686 method=8
 eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd-begin size=.-start_of_cd
+""")
+
+gen(
+    "reject/shortextra.zip",
+    """
+lfh flags=0 method=8 csize=y-x usize=5 crc32=0x3610a686
+mark x
+deflate b"hello"
+mark y
+mark start_of_cd
+
+# -1 here breaks things
+cd csize=y-x usize=5 crc32=0x3610a686 method=8 extra_length=zz-z-1 filename=b"fixme"
+mark z
+# this is the real length
+short 7075 =9
+byte 1
+crc32 b"fixme"
+byte c3 a9 74 63
+mark zz
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
 """)
