@@ -376,3 +376,21 @@ byte c3 a9 74 63
 mark zz
 eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
 """)
+
+gen(
+    "iffy/non_ascii_original_name.zip",
+    """
+lfh flags=0 method=8 csize=y-x usize=5 crc32=0x3610a686 filename=b"\\x82"
+mark x
+deflate b"hello"
+mark y
+mark start_of_cd
+cd csize=y-x usize=5 crc32=0x3610a686 method=8 filename=b"\\x82" extra_length=zz-z
+mark z
+short 7075 =5+2
+byte 1
+crc32 b"\\x82"
+byte c3 a9
+mark zz
+eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
+""")
