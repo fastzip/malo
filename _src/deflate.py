@@ -1,4 +1,7 @@
 from __future__ import annotations
+import logging
+
+log = logging.getLogger(__name__)
 
 MAXBITS = 15
 MAXLCODES = 286
@@ -52,10 +55,10 @@ class Bitstream:
         r = (self.b[self.i] >> self.j) & 1
         self.j += 1
         if self.j == 8:
-            print("next byte", self.i, hex(self.b[self.i]))
+            log.debug("next byte %s %s", self.i, hex(self.b[self.i]))
             self.i += 1
             self.j = 0
-        print("next ->", r)
+        log.debug("next -> %s", r)
         return r
 
     def read(self, n_bits) -> tuple[int, ...]:
@@ -91,7 +94,6 @@ class Bitstream:
         Does not check eof afterwards.
         """
         while self.j != 0:
-            # print("discard")
             n = self.next()
             assert n == 0  # are people trying to smuggle data in the padding bits?
 
@@ -109,48 +111,47 @@ class DeflateReader:
         bs = self.bs
 
         while True:
-            print(bs.pos(), end=" ")
+            log.debug("%s", bs.pos())
 
             bfinal = bs.next()
             btype = bs.read(2)[::-1]
 
-
             if btype == (0, 0):
                 # non-compressed blocks
-                print("block btype=00")
+                log.debug("block btype=00")
                 bs.ignore_rest_of_byte()
 
-                print(bs.pos(), end=" ")
+                log.debug("%s", bs.pos())
                 len = bs.read_short()
                 nlen = bs.read_short()
-                print("  len", len)
+                log.debug("  len %s", len)
                 assert len ^ 0xffff == nlen, f"{len} != {nlen}"
-                print(bs.pos(), end=" ")
+                log.debug("%s", bs.pos())
                 new = [bs.read_byte() for _ in range(len)]
-                print("  data", new)
+                log.debug("  data %s", new)
                 self.output.extend(new)
 
             elif btype == (0, 1):
                 # compressed, fixed huffman
-                print("block btype=01")
+                log.debug("block btype=01")
                 self.setup_fixed_huffman()
                 self.read_compressed()
             elif btype == (1, 0):
                 # compressed, dynamic huffman
-                print("block btype=10")
+                log.debug("block btype=10")
                 self.setup_dynamic_huffman()
                 self.read_compressed()
             else:
                 # error on (1, 1)
-                print("block btype=11")
+                log.debug("block btype=11")
                 raise DeflateError("btype 11 reserved")
 
             if bfinal:
-                print("final set, done")
+                log.debug("final set, done")
                 break
 
         # assert bs.eof()
-        print(self.output)
+        log.debug("%s", self.output)
 
     def setup_fixed_huffman(self):
         self.symbols = self.fixed_symbols()
@@ -178,7 +179,7 @@ class DeflateReader:
         nlen = bs.read_int(5) + 257
         ndist = bs.read_int(5) + 1
         ncode = bs.read_int(4) + 4
-        print(f"  {nlen=} {ndist=} {ncode=}")
+        log.debug("  nlen=%s ndist=%s ncode=%s", nlen, ndist, ncode)
 
         assert nlen <= MAXLCODES
         assert ndist <= MAXDCODES
@@ -188,20 +189,19 @@ class DeflateReader:
         for i in range(ncode):
             lengths[CODE_ORDER[i]] = bs.read_int(3)
         # Don't need zero from ncode to MAXCODES
-        print("lengths", lengths)
+        log.debug("lengths %s", lengths)
 
         tab = Huff(lengths, 19)
         assert tab.left == 0
 
-        #print(f"  {tab=}")
         index = 0
 
         while index < (nlen + ndist):
             symbol = tab.decode(bs)
-            print(" dyn sym", symbol)
+            log.debug(" dyn sym %s", symbol)
             if symbol < 16:
                 lengths[index] = symbol
-                print("  lit", symbol)
+                log.debug("  lit %s", symbol)
                 index += 1
             else:
                 rep = 0
@@ -218,7 +218,7 @@ class DeflateReader:
                 for _ in range(symbol):
                     lengths[index] = rep
                     index += 1
-            print("done dec", index)
+            log.debug("done dec %s", index)
 
         assert lengths[256] != 0
         self.symbols = Huff(lengths[:nlen], nlen)
@@ -227,11 +227,10 @@ class DeflateReader:
     def read_compressed(self):
         while True:
             symbol = self.symbols.decode(self.bs)
-            print("     sym =", symbol)
+            log.debug("     sym = %s", symbol)
             if symbol < 256:
                 # literal
                 self.output.append(symbol)
-                print()
             elif symbol == 256:
                 break
             else:
@@ -240,11 +239,10 @@ class DeflateReader:
                 el = LENS[symbol] + self.bs.read_int(LEXT[symbol])
                 symbol = self.distances.decode(self.bs)
                 dist = DISTS[symbol] + self.bs.read_int(DEXT[symbol])
-                print("    el =", el, " dist =", dist)
+                log.debug("    el = %s  dist = %s", el, dist)
                 assert dist < len(self.output)
                 for _ in range(el):
                     self.output.append(self.output[-dist])
-                print()
 
 class Huff:
     def __init__(self, lengths, n):
@@ -274,9 +272,9 @@ class Huff:
         self.symbol = tab
         self.count = counts
         self.left = left
-        print("  tab", tab)
-        print("  count", counts)
-        print("  left", left)
+        log.debug("  tab %s", tab)
+        log.debug("  count %s", counts)
+        log.debug("  left %s", left)
 
     def decode(self, bs):
         code = 0
@@ -297,4 +295,5 @@ class Huff:
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.DEBUG)
     DeflateReader(sys.argv[1])

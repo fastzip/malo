@@ -31,17 +31,13 @@ def test_example_from_rfc1951():
     h = Huff([2, 1, 3, 3], 4)
     assert h.left == 0
     assert h.decode(bs) == 1 # "B"
-    print()
 
     bs = Bitstream(b"\xff")
     assert h.decode(bs) == 3 # "D"
-    print()
 
     bs = Bitstream(b"\x03") # ....0 011
     assert h.decode(bs) == 2 # "C"
-    print()
     assert h.decode(bs) == 1 # "B"
-    print()
 
 def test_deflate_empty():
     data = zlib.compress(b"", -1, -15)
