@@ -15,8 +15,8 @@ class LocalFileHeader:
     version_needed: int = 20
     flags: int  = 0
     method: int = 0
-    mtime: int = 0 # TODO is this 1980
-    mdate: int = 0
+    mtime: int = 0       # 00:00:00
+    mdate: int = 0x21   # 1980-01-01 (DOS epoch)
     crc32: int = 0
     csize: int = 0
     usize: int = 0
@@ -58,8 +58,8 @@ class CentralDirectoryHeader:
     version_needed: int = 20
     flags: int = 0
     method: int = 0
-    mtime: int = 0
-    mdate: int = 0
+    mtime: int = 0       # 00:00:00
+    mdate: int = 0x21   # 1980-01-01 (DOS epoch)
     crc32: int = 0
     csize: int = 0
     usize: int = 0
