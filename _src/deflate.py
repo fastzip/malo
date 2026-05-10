@@ -30,6 +30,9 @@ DEXT = [
     12, 12, 13, 13
 ]
 
+class DeflateError(Exception):
+    pass
+
 class Bitstream:
     def __init__(self, b):
         self.b = b
