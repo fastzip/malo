@@ -243,7 +243,7 @@ class DeflateReader:
                 symbol = self.distances.decode(self.bs)
                 dist = DISTS[symbol] + self.bs.read_int(DEXT[symbol])
                 log.debug("    el = %s  dist = %s", el, dist)
-                assert dist < len(self.output)
+                assert dist <= len(self.output)
                 for _ in range(el):
                     self.output.append(self.output[-dist])
 

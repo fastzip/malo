@@ -1,3 +1,4 @@
+import pytest
 import zlib
 from deflate import Huff, Bitstream, DeflateReader
 
@@ -59,6 +60,21 @@ def test_deflate_big_stored_separate_final():
     assert zlib.decompress(data, -15) == b"\x00\x01\x02\x03\x04"
     reader = DeflateReader("", data)
     assert reader.output == [0, 1, 2, 3, 4]
+
+def test_deflate_backref_reaches_start():
+    # dist == len(output): back-reference reaching position 0 is valid.
+    # Fixed huffman block: literals 'a','b','c', back-ref(dist=3, len=3), EOB.
+    data = b"\x4b\x4c\x4a\x06\x22\x00"
+    assert zlib.decompress(data, -15) == b"abcabc"
+    reader = DeflateReader("", data)
+    assert reader.output == list(b"abcabc")
+
+def test_deflate_backref_past_start():
+    # dist > len(output): back-reference past the beginning should be rejected.
+    # Same block as above but dist=4 instead of dist=3 (byte 4: 0x22 -> 0x62).
+    data = b"\x4b\x4c\x4a\x06\x62\x00"
+    with pytest.raises(AssertionError):
+        DeflateReader("", data)
 
 def test_deflate_big_stored_final():
     data = b"\x01\x05\x00\xfa\xff\x00\x01\x02\x03\x04"
