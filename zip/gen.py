@@ -131,3 +131,25 @@ with open("malicious/zipinzip.zip", "wb") as f:
     f.write(t1[:-2])
     f.write(struct.pack("<H", len(t2)))
     f.write(t2)
+
+# CRC32 of empty is 0x00000000; this 8-byte sequence also has CRC32=0.
+_nonempty_crc0 = bytes.fromhex('d00dfacecb199ef0')
+assert zlib.crc32(_nonempty_crc0) == 0
+
+# iffy: two members with the same CRC32 — one empty, one not
+with zipfile.ZipFile("iffy/crc_collision_empty_nonempty.zip", "w") as z:
+    z.writestr(zipfile.ZipInfo("empty"), b"")
+    z.writestr(zipfile.ZipInfo("nonempty"), _nonempty_crc0)
+
+# iffy: two non-empty members of different sizes with the same CRC32
+_A = b'abc'
+_B = b'abc\xe4\x50\x2c\x59'
+assert zlib.crc32(_A) == zlib.crc32(_B)
+assert len(_A) != len(_B)
+with zipfile.ZipFile("iffy/crc_collision_two_nonempty.zip", "w") as z:
+    z.writestr(zipfile.ZipInfo("short"), _A)
+    z.writestr(zipfile.ZipInfo("long"), _B)
+
+# iffy: single non-empty member whose CRC32 equals that of the empty file (0)
+with zipfile.ZipFile("iffy/crc_zero_nonempty.zip", "w") as z:
+    z.writestr(zipfile.ZipInfo("file"), _nonempty_crc0)
