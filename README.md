@@ -14,4 +14,4 @@ The contributors believe there to be the beginnings of parser differentials
 invited by accepting any of `iffy` or `malicious` (for example, ignoring
 checksums).
 
-SPDX-License-Identifier: CC0-1.0
+SPDX-License-Identifier: CC0-1.0 OR BSD-2-Clause
