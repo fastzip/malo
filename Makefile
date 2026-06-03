@@ -9,3 +9,4 @@ gen:
 	$(MAKE) -C tar gen
 	$(MAKE) -C zar gen
 	$(MAKE) -C zstd gen
+	$(MAKE) -C nar gen
