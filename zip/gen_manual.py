@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
 
-sys.path.append("../_src")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "_src"))
 
-import zipwoot
+from malo.zip import construct as zipwoot
 
 def gen(fn, script):
     data = zipwoot.compile(script)
@@ -176,7 +176,7 @@ cd csize=y-x usize=5 crc32=0x3610a686 method=8
 eocd num_entries_this_disk=1 num_entries_total=1 offset_start=start_of_cd size=.-start_of_cd
 """)
 gen(
-    "reject/data_descriptor_bad_crc_0.zip",
+    "reject/data_descriptor_bad_content_zero_crc.zip",
     """
 lfh flags=8 method=8
 mark x
