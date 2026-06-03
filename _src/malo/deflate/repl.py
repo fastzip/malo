@@ -1,5 +1,5 @@
 import zlib
-import woot
+from malo.deflate import asm as woot
 
 def main():
     while line := input("> "):

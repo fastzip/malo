@@ -1,5 +1,4 @@
 import re
-from deflate import Bitstream, DeflateReader
 
 CMD_RE = re.compile(r'bit|byte|sync|[0-9a-fA-F]+|#.*|\s')
 

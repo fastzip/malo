@@ -43,18 +43,14 @@ class Bitstream:
         self.j = 0
 
     def pos(self):
-        """
-        A fixed-length string representing the bitstream position for debugging.
-        """
+        """Fixed-length string representing the bitstream position for debugging."""
         return "%04x %s" % (self.i, (("+%d" % self.j) if self.j else "  "))
 
     def eof(self):
         return self.i == len(self.b)
 
     def next(self):
-        """
-        Raises IndexError if past the end.
-        """
+        """Return the next bit. Raises IndexError if past the end."""
         r = (self.b[self.i] >> self.j) & 1
         self.j += 1
         if self.j == 8:
@@ -91,14 +87,11 @@ class Bitstream:
         return r
 
     def ignore_rest_of_byte(self):
-        """
-        Ensure that we're at the beginning of a byte.
-
-        Does not check eof afterwards.
-        """
+        """Consume padding bits until byte-aligned. Does not check eof."""
         while self.j != 0:
             n = self.next()
-            assert n == 0  # are people trying to smuggle data in the padding bits?
+            if n != 0:
+                raise DeflateError("non-zero padding bits in stored block")
 
 class DeflateReader:
     def __init__(self, filename, data=None):
@@ -125,12 +118,12 @@ class DeflateReader:
                 bs.ignore_rest_of_byte()
 
                 log.debug("%s", bs.pos())
-                len = bs.read_short()
+                block_len = bs.read_short()
                 nlen = bs.read_short()
-                log.debug("  len %s", len)
-                assert len ^ 0xffff == nlen, f"{len} != {nlen}"
+                log.debug("  len %s", block_len)
+                assert block_len ^ 0xffff == nlen, f"{block_len} != {nlen}"
                 log.debug("%s", bs.pos())
-                new = [bs.read_byte() for _ in range(len)]
+                new = [bs.read_byte() for _ in range(block_len)]
                 log.debug("  data %s", new)
                 self.output.extend(new)
 
@@ -238,6 +231,8 @@ class DeflateReader:
                 break
             else:
                 # length-distance
+                if symbol > 285:
+                    raise DeflateError(f"invalid length/literal symbol {symbol}")
                 symbol -= 257
                 el = LENS[symbol] + self.bs.read_int(LEXT[symbol])
                 symbol = self.distances.decode(self.bs)

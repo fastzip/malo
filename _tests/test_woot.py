@@ -1,6 +1,7 @@
 import pytest
 
-from woot import compile
+from malo.deflate.asm import compile
+
 
 def test_empty():
     assert compile("") == []
