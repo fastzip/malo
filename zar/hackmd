@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+usage() {
+    echo "usage: $(basename "$0") <pull|push|diff>" >&2
+    exit 1
+}
+
+_id() { sed -n 's/^hackmd: //p' "$1" | head -1; }
+
+pull() {
+    for f in *.md; do
+        id=$(_id "$f"); [ -z "$id" ] && continue
+        echo "Pulling $f ($id)..."
+        tmp=$(mktemp --suffix=.md)
+        hackmd-cli export --noteId "$id" > "$tmp"
+        if grep -q "^hackmd: $id" "$tmp"; then
+            mv "$tmp" "$f"
+        else
+            { printf -- '---\nhackmd: %s\n---\n' "$id"; cat "$tmp"; } > "$f"
+            rm "$tmp"
+        fi
+    done
+}
+
+push() {
+    for f in *.md; do
+        id=$(_id "$f"); [ -z "$id" ] && continue
+        echo "Pushing $f ($id)..."
+        hackmd-cli notes update --noteId "$id" --content "$(cat "$f")"
+    done
+}
+
+diff() {
+    local status=0
+    for f in *.md; do
+        id=$(_id "$f"); [ -z "$id" ] && continue
+        tmp=$(mktemp --suffix=.md)
+        hackmd-cli export --noteId "$id" > "$tmp"
+        if ! grep -q "^hackmd: $id" "$tmp"; then
+            { printf -- '---\nhackmd: %s\n---\n' "$id"; cat "$tmp"; } > "$tmp.n"
+            mv "$tmp.n" "$tmp"
+        fi
+        if ! command diff -q "$tmp" "$f" > /dev/null 2>&1; then
+            echo "=== $f vs HackMD ==="
+            command diff --color=always -u \
+                --label "hackmd/$id" --label "$f" "$tmp" "$f" || true
+            status=1
+        fi
+        rm "$tmp"
+    done
+    [ $status -eq 0 ] && echo "All files match HackMD."
+    return $status
+}
+
+case "${1:-}" in
+    pull) pull ;;
+    push) push ;;
+    diff) diff ;;
+    *)    usage ;;
+esac
