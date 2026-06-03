@@ -172,3 +172,11 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Oracle build outputs and caches
+oracles/**/bin/
+oracles/**/obj/
+oracles/**/target/
+oracles/**/__pycache__/
+oracles/**/node_modules/
+oracles/**/.zig-cache/
