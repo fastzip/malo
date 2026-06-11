@@ -174,16 +174,39 @@ gen(
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
-# malicious/dir_with_embedded_header_and_pax.tar: a directory payload header says malicious.txt,
-# while the later PAX-resolved member should resolve to benign.txt.
+# malicious/dir_with_embedded_header_and_pax.tar: a directory payload hides a
+# pax header for a later member, renaming it only for parsers that assume
+# directories are zero-size.
 gen(
     "malicious/dir_with_embedded_header_and_pax.tar",
     entry(
-        TarHeader(name=b"dir/", mode=0o755, typeflag=b"5", size=1024),
+        TarHeader(name=b"dir/", mode=0o755, typeflag=b"5", size=512),
         pax_header([(b"path", b"malicious.txt")]),
     )
-    + entry(TarHeader(name=b"foo", size=5), b"hello")
-    + entry(TarHeader(name=b"bar", size=5), b"hello")
+    + entry(TarHeader(name=b"benign.txt", size=5), b"hello")
+    + end_of_archive(),
+    {
+        "expected": [
+            {
+                "member": "benign.txt",
+                "type": "file",
+                "size": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            }
+        ],
+        "vulnerable_when": [{"member": "malicious.txt"}],
+    },
+)
+# malicious/dir_with_embedded_entry.tar: a directory payload hides a complete
+# member, making it visible only for parsers that assume directories are
+# zero-size.
+gen(
+    "malicious/dir_with_embedded_entry.tar",
+    entry(
+        TarHeader(name=b"dir/", mode=0o755, typeflag=b"5", size=1024),
+        entry(TarHeader(name=b"malicious.txt", size=5), b"hello")
+    )
+    + entry(TarHeader(name=b"benign.txt", size=5), b"hello")
     + end_of_archive(),
     {
         "expected": [
@@ -213,15 +236,17 @@ gen(
     "malicious/symlink_with_data.tar",
     entry(TarHeader(name=b"link", typeflag=b"2", linkname=b"target", size=5), b"hello")
     + end_of_archive(),
-    {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
 # malicious/symlink_with_embedded_header.tar: a symlink entry whose payload is another tar header
 gen(
     "malicious/symlink_with_embedded_header.tar",
     entry(
-        TarHeader(name=b"link", typeflag=b"2", linkname=b"target", size=512),
-        TarHeader(name=b"embedded.txt", size=5).pack(),
+        TarHeader(name=b"link", typeflag=b"2", linkname=b"target", size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
     )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
@@ -235,21 +260,30 @@ gen(
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
-# malicious/hardlink_with_embedded_header.tar: a hardlink entry whose payload is another tar header
+# malicious/hardlink_with_embedded_header.tar: a hardlink entry whose payload is another tar entry
 gen(
     "malicious/hardlink_with_embedded_header.tar",
     entry(
-        TarHeader(name=b"hard.txt", typeflag=b"1", linkname=b"target.txt", size=512),
-        TarHeader(name=b"embedded.txt", size=5).pack(),
+        TarHeader(name=b"hard.txt", typeflag=b"1", linkname=b"target.txt", size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
     )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
-# malicious/fifo_with_data.tar: a FIFO entry whose payload is another tar header
+# malicious/fifo_with_data.tar: a FIFO entry whose payload is another tar entry
 gen(
     "malicious/fifo_with_data.tar",
-    entry(TarHeader(name=b"fifo0", typeflag=b"6", size=512), TarHeader(name=b"embedded.txt", size=5).pack())
+    entry(
+        TarHeader(name=b"fifo0", typeflag=b"6", size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
+    )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
@@ -257,7 +291,13 @@ gen(
 # malicious/fifo_with_embedded_header.tar: a FIFO entry whose payload is another tar header
 gen(
     "malicious/fifo_with_embedded_header.tar",
-    entry(TarHeader(name=b"fifo0", typeflag=b"6", size=512), TarHeader(name=b"embedded.txt", size=5).pack())
+    entry(
+        TarHeader(name=b"fifo0", typeflag=b"6", size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
+    )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
@@ -273,12 +313,29 @@ gen(
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
-# malicious/chardev_with_embedded_header.tar: a character device entry whose payload is another tar header
+# malicious/chardev_with_embedded_header.tar: a character device entry whose payload is another tar entry
 gen(
     "malicious/chardev_with_embedded_header.tar",
     entry(
-        TarHeader(name=b"char0", typeflag=b"3", devmajor=1, devminor=7, size=512),
-        TarHeader(name=b"embedded.txt", size=5).pack(),
+        TarHeader(name=b"char0", typeflag=b"3", devmajor=1, devminor=7, size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
+    )
+    + end_of_archive(),
+    {"vulnerable_when": [{"member": "embedded.txt"}]},
+)
+
+# malicious/blockdev_with_embedded_header.tar: a block device entry whose payload is another tar entry
+gen(
+    "malicious/blockdev_with_embedded_header.tar",
+    entry(
+        TarHeader(name=b"block0", typeflag=b"4", devmajor=8, devminor=0, size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
     )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
@@ -295,12 +352,15 @@ gen(
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
-# malicious/blockdev_with_embedded_header.tar: a block device entry whose payload is another tar header
+# malicious/volume_header_with_embedded_header.tar: a volume header entry whose payload is another tar entry
 gen(
-    "malicious/blockdev_with_embedded_header.tar",
+    "malicious/volume_header_with_embedded_header.tar",
     entry(
-        TarHeader(name=b"block0", typeflag=b"4", devmajor=8, devminor=0, size=512),
-        TarHeader(name=b"embedded.txt", size=5).pack(),
+        TarHeader(name=b"volume", typeflag=b"V", size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
     )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
@@ -317,12 +377,15 @@ gen(
     {"vulnerable_when": [{"member": "embedded.txt"}]},
 )
 
-# malicious/volume_header_with_embedded_header.tar: a volume header entry whose payload is another tar header
+# malicious/dumpdir_with_embedded_header.tar: a GNU dumpdir entry whose payload is another tar entry
 gen(
-    "malicious/volume_header_with_embedded_header.tar",
+    "malicious/dumpdir_with_embedded_header.tar",
     entry(
-        TarHeader(name=b"volume", typeflag=b"V", size=512),
-        TarHeader(name=b"embedded.txt", size=5).pack(),
+        TarHeader(name=b"dumpdir", typeflag=b"D", size=1024),
+        entry(
+            TarHeader(name=b"embedded.txt", size=5),
+            b"hello",
+        ),
     )
     + end_of_archive(),
     {"vulnerable_when": [{"member": "embedded.txt"}]},
@@ -331,17 +394,6 @@ gen(
 # malicious/dumpdir_with_data.tar: a GNU dumpdir entry whose payload is another tar header
 gen(
     "malicious/dumpdir_with_data.tar",
-    entry(
-        TarHeader(name=b"dumpdir", typeflag=b"D", size=512),
-        TarHeader(name=b"embedded.txt", size=5).pack(),
-    )
-    + end_of_archive(),
-    {"vulnerable_when": [{"member": "embedded.txt"}]},
-)
-
-# malicious/dumpdir_with_embedded_header.tar: a GNU dumpdir entry whose payload is another tar header
-gen(
-    "malicious/dumpdir_with_embedded_header.tar",
     entry(
         TarHeader(name=b"dumpdir", typeflag=b"D", size=512),
         TarHeader(name=b"embedded.txt", size=5).pack(),
